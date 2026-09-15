@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TICKET MAKER</title>
+<style>
+*{box-sizing:border-box}:root{--bg:#1b1815;--panel:#25211c;--line:#4a4238}
+body{margin:0;background:var(--bg);color:#f2ece3;font-family:Arial,"Noto Sans KR",sans-serif}
+.wrap{max-width:1260px;margin:auto;padding:34px 24px 60px}
+h1{margin:0;font:800 27px Georgia,"Times New Roman",serif;letter-spacing:5px}.sub{margin:7px 0 25px;color:#aaa197;font-size:11px;letter-spacing:2px}
+.layout{display:grid;grid-template-columns:minmax(0,850px) 340px;gap:28px}
+.preview{background:#302c28;border:1px solid #49423a;padding:24px;min-height:520px;display:flex;align-items:center}
+.stage{width:100%;padding:30px 16px;background:repeating-conic-gradient(#4a4742 0 25%,#615d57 0 50%) 50%/20px 20px}
+canvas{display:block;width:100%;height:auto}
+.panel{background:var(--panel);border:1px solid var(--line);padding:19px;max-height:calc(100vh - 120px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}.preview{position:sticky;top:24px;align-self:start}.g{padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid #463e35}.g:last-of-type{border:0}
+.t{font-size:12px;font-weight:900;letter-spacing:1.3px;margin-bottom:10px}label,.hint{display:block;font-size:11px;color:#bdb4a8;margin:7px 0}
+input[type=text],input[type=date]{width:100%;padding:9px;background:#181511;color:#eee8df;border:1px solid #51483e;font:inherit}
+input[type=file]{width:100%;font-size:11px;color:#bdb4a8}input[type=checkbox]{accent-color:#b79b7b}
+.colors{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.colors button{padding:8px 2px;border:1px solid #554b40;background:#191612;color:#c5bcb0;font-size:9px;cursor:pointer}.colors button.on{background:#eee8dc;color:#211d18;font-weight:900}
+.save{width:100%;padding:13px;border:0;background:#ebe3d5;color:#211d18;font-weight:900;letter-spacing:1px;cursor:pointer}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}.mini{padding:8px;border:1px solid #554b40;background:#191612;color:#c5bcb0;font-size:10px;cursor:pointer}
+input[type=range],select{width:100%}select{padding:8px;background:#181511;color:#eee8df;border:1px solid #51483e}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px}.checks label{display:flex;align-items:center;gap:5px}
+.customrow{display:grid;grid-template-columns:1fr 44px;gap:6px;margin-top:7px}.customrow input[type=color]{width:44px;height:33px;padding:2px;background:#191612;border:1px solid #554b40}
+@media(max-width:920px){.layout{grid-template-columns:1fr}.preview{min-height:auto;position:static}.panel{max-height:none;overflow:visible}}
+</style><link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+@font-face{
+  font-family:'RIENTicketFont';
+  src:url('./assets/KyoboHandwriting2023wsa.ttf') format('truetype');
+  font-weight:400 700;
+  font-style:normal;
+  font-display:block;
+}
+</style>
+</head>
+<body><div class="wrap">
+<h1>TICKET MAKER</h1><div class="sub">VINTAGE PHOTO TICKET · 16:9 PHOTO</div>
+<div class="layout">
+<section class="preview"><div class="stage"><canvas id="c" width="1200" height="560"></canvas></div></section>
+<section class="panel">
+<div class="g"><div class="t">PHOTO</div><input id="file" type="file" accept="image/*"><span class="hint">1920×1080 등 16:9 사진에 맞춘 영역입니다.</span>
+<label>사진 확대 <span id="zoomVal">100%</span></label><input id="zoom" type="range" min="100" max="220" value="100">
+<label>가로 위치</label><input id="panX" type="range" min="-100" max="100" value="0">
+<label>세로 위치</label><input id="panY" type="range" min="-100" max="100" value="0"></div>
+<div class="g"><div class="t">PHOTO EFFECT</div>
+<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="vintage" type="checkbox"> 빛 바램 효과</label>
+</div>
+<div class="g"><div class="t">PHOTO TEXT</div><label>메인 타이틀</label><input id="title" type="text" value="Memory Lane" maxlength="30"><label>작은 문구</label><input id="subtitle" type="text" value="A MOMENT WORTH KEEPING" maxlength="46"></div>
+<div class="g"><div class="t">TEXT DISPLAY</div><div class="checks">
+<label><input id="showTitle" type="checkbox" checked> 사진 제목</label>
+<label><input id="showSubtitle" type="checkbox" checked> 작은 문구</label>
+<label><input id="showArchive" type="checkbox" checked> 맨 위 문구</label>
+</div></div>
+<div class="g"><div class="t">TICKET TEXT</div><label>상단 문구</label><input id="top" type="text" value="ADMIT ONE" maxlength="20"><label>이름</label><input id="name" type="text" value="YOUR NAME" maxlength="24"><label>날짜</label><input id="date" type="date"><label>장소</label><input id="place" type="text" value="SEOUL" maxlength="24"><label>좌석 / 번호</label><input id="seat" type="text" value="A / 17" maxlength="14"><label>하단 문구</label><input id="footer" type="text" value="MEMORY ARCHIVE · 0017" maxlength="38">
+<div class="row2" style="margin-top:9px"><button class="mini" id="randomNo">랜덤 티켓 번호</button><button class="mini" id="resetText">텍스트 초기화</button></div></div>
+<div class="g"><div class="t">PAPER</div><div class="colors"><button class="on" data-color="white">WHITE</button><button data-color="ivory">IVORY</button><button data-color="pink">PINK</button><button data-color="yellow">YELLOW</button></div>
+<div class="customrow"><button class="mini" id="customBtn">CUSTOM</button><input id="customColor" type="color" value="#f3e7cf"></div></div>
+<div class="g"><div class="t">EXPORT</div><label>PNG 저장 크기</label><select id="exportScale"><option value="1">기본 · 1090×470</option><option value="2">2× 고화질 · 2180×940</option></select>
+<div class="row2" style="margin-top:9px"><button class="mini" id="resetAll">전체 초기화</button><label class="check" style="justify-content:center"><input type="checkbox" id="rememberSettings"> 입력 내용 기억하기</label></div>
+<span class="hint">켜면 이 브라우저에만 저장됩니다. 다른 사람에게는 보이지 않습니다.</span></div>
+<button class="save" id="save">투명 PNG 저장</button>
+</section></div></div>
+<script>
+const c=document.querySelector('#c'),x=c.getContext('2d');
+const file=document.querySelector('#file'),vintage=document.querySelector('#vintage'),title=document.querySelector('#title'),subtitle=document.querySelector('#subtitle'),topEl=document.querySelector('#top'),nameEl=document.querySelector('#name'),date=document.querySelector('#date'),place=document.querySelector('#place'),seat=document.querySelector('#seat'),footer=document.querySelector('#footer');
+const rememberSettings=document.querySelector('#rememberSettings');
+date.value=new Date().toISOString().slice(0,10);let img=null,color='white';
+const zoom=document.querySelector('#zoom'),panX=document.querySelector('#panX'),panY=document.querySelector('#panY'),zoomVal=document.querySelector('#zoomVal');
+const showTitle=document.querySelector('#showTitle'),showSubtitle=document.querySelector('#showSubtitle'),showArchive=document.querySelector('#showArchive');
+const customColor=document.querySelector('#customColor'),exportScale=document.querySelector('#exportScale');
+const P={
+ white:{paper:'#fbfaf6',frame:'#e7e2d9',ink:'#342f2a',accent:'#918376'},
+ ivory:{paper:'#f6efdc',frame:'#e5d8ba',ink:'#3c342b',accent:'#a08766'},
+ pink:{paper:'#fae8ec',frame:'#edcfd7',ink:'#49393e',accent:'#bd909c'},
+ yellow:{paper:'#fff4cb',frame:'#efdda4',ink:'#463e2e',accent:'#b79b58'},
+ custom:{paper:'#f3e7cf',frame:'#d7c6a8',ink:'#40372e',accent:'#a68c69'}
+};
+function mix(hex,a){let n=parseInt(hex.slice(1),16),r=n>>16,g=n>>8&255,b=n&255,t=a<0?0:255,p=Math.abs(a);r=Math.round(r+(t-r)*p);g=Math.round(g+(t-g)*p);b=Math.round(b+(t-b)*p);return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1)}
+function setCustom(hex){P.custom={paper:hex,frame:mix(hex,-.12),ink:mix(hex,-.72),accent:mix(hex,-.32)}}
+// Geometry:
+// Uploaded photo gate = exactly 720×405 (16:9).
+// Ticket adds a 270px information stub plus paper margins.
+const TX=55,TY=45,TW=1090,TH=470;
+const PX=85,PY=77.5,PW=720,PH=405;
+const CUT=820, SX=845;
+
+function basePath(){x.beginPath();x.rect(TX,TY,TW,TH)}
+function perforate(){
+ x.save();x.globalCompositeOperation='destination-out';x.fillStyle='#000';
+ const r=9, nx=40, ny=16, sx=TW/nx, sy=TH/ny;
+ for(let i=0;i<nx;i++){let xx=TX+sx*(i+.5);x.beginPath();x.arc(xx,TY,r,0,Math.PI*2);x.fill();x.beginPath();x.arc(xx,TY+TH,r,0,Math.PI*2);x.fill()}
+ for(let i=0;i<ny;i++){let yy=TY+sy*(i+.5);x.beginPath();x.arc(TX,yy,r,0,Math.PI*2);x.fill();x.beginPath();x.arc(TX+TW,yy,r,0,Math.PI*2);x.fill()}
+ const q=4.5;[[TX,TY],[TX+TW,TY],[TX,TY+TH],[TX+TW,TY+TH]].forEach(([a,b])=>{x.beginPath();x.arc(a,b,q,0,Math.PI*2);x.fill()});x.restore()
+}
+function contain16(){
+ if(!img){x.fillStyle='#7c7369';x.fillRect(PX,PY,PW,PH);x.fillStyle='#eee7da';x.textAlign='center';x.font='700 23px Georgia';x.fillText('YOUR PHOTO',PX+PW/2,PY+PH/2);return}
+ // No crop: fit entire image. 16:9 source fills the gate exactly.
+ const s0=Math.min(PW/img.width,PH/img.height),s=s0*(Number(zoom.value)/100),w=img.width*s,h=img.height*s;
+ const fx=Math.max(0,(w-PW)/2),fy=Math.max(0,(h-PH)/2),ox=(Number(panX.value)/100)*fx,oy=(Number(panY.value)/100)*fy;
+ x.fillStyle='#211f1c';x.fillRect(PX,PY,PW,PH);x.save();x.beginPath();x.rect(PX,PY,PW,PH);x.clip();x.drawImage(img,PX+(PW-w)/2-ox,PY+(PH-h)/2-oy,w,h);x.restore()
+}
+function fit(t,max,size,font='Georgia'){x.font=`800 ${size}px ${font}`;while(x.measureText(t).width>max&&size>14){size--;x.font=`800 ${size}px ${font}`}return size}
+
+function agedPrintEffect(){
+ if(!vintage.checked)return;
+
+ // 1) Actually age the uploaded photograph pixels instead of placing a brown veil on top.
+ if(img){
+   const im=x.getImageData(PX,PY,PW,PH), d=im.data;
+   let seed=826031;
+   const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+   for(let py=0;py<PH;py++){
+     for(let px=0;px<PW;px++){
+       const i=(py*PW+px)*4;
+       let r=d[i],g=d[i+1],b=d[i+2];
+       const lum=.299*r+.587*g+.114*b;
+       // old printed photograph: muted chroma, lifted blacks, compressed highlights
+       r=lum+(r-lum)*.58; g=lum+(g-lum)*.55; b=lum+(b-lum)*.46;
+       r=r*.88+27; g=g*.84+24; b=b*.76+18;
+       // subtle coarse photographic grain (not visible dot sprites)
+       const n=(rnd()-.5)*7;
+       d[i]=Math.max(0,Math.min(255,r+n));
+       d[i+1]=Math.max(0,Math.min(255,g+n*.86));
+       d[i+2]=Math.max(0,Math.min(255,b+n*.58));
+     }
+   }
+   x.putImageData(im,PX,PY);
+ }
+
+ x.save();
+ x.globalCompositeOperation='source-atop';
+ let seed=771923;
+ const rnd=()=>{seed=(seed*1103515245+12345)>>>0;return seed/4294967296};
+
+ // 2) Real paper aging: broad irregular discoloration, strongest at edges.
+ function stain(cx,cy,rx,ry,a){
+   x.save();x.translate(cx,cy);x.rotate((rnd()-.5)*.45);x.scale(1,ry/rx);
+   const g=x.createRadialGradient(0,0,rx*.06,0,0,rx);
+   g.addColorStop(0,`rgba(88,51,23,${a})`);
+   g.addColorStop(.33,`rgba(116,69,30,${a*.62})`);
+   g.addColorStop(.72,`rgba(129,82,39,${a*.19})`);
+   g.addColorStop(1,'rgba(100,60,28,0)');
+   x.fillStyle=g;x.beginPath();x.arc(0,0,rx,0,Math.PI*2);x.fill();x.restore();
+ }
+ stain(TX+30,TY+35,115,76,.23);
+ stain(TX+220,TY+TH+2,190,74,.11);
+ stain(TX+TW*.55,TY-5,180,68,.10);
+ stain(TX+TW-25,TY+65,130,112,.25);
+ stain(TX+TW-110,TY+TH-18,155,88,.20);
+
+ const edge=x.createRadialGradient(TX+TW/2,TY+TH/2,TH*.30,TX+TW/2,TY+TH/2,TW*.62);
+ edge.addColorStop(.58,'rgba(50,29,15,0)');
+ edge.addColorStop(.83,'rgba(50,29,15,.055)');
+ edge.addColorStop(1,'rgba(43,24,12,.23)');
+ x.fillStyle=edge;x.fillRect(TX,TY,TW,TH);
+
+ // 3) Photo emulsion damage — broad rubbed areas + organic scratches.
+ x.save();x.beginPath();x.rect(PX,PY,PW,PH);x.clip();
+
+ // cloudy emulsion wear
+ for(let k=0;k<15;k++){
+   const cx=PX+rnd()*PW,cy=PY+rnd()*PH,rx=12+rnd()*46,ry=3+rnd()*15;
+   x.save();x.translate(cx,cy);x.rotate((rnd()-.5)*1.4);x.scale(1,ry/rx);
+   const g=x.createRadialGradient(0,0,0,0,0,rx);
+   g.addColorStop(0,`rgba(247,226,190,${.10+rnd()*.12})`);
+   g.addColorStop(.48,`rgba(237,214,177,${.045+rnd()*.06})`);
+   g.addColorStop(1,'rgba(230,205,170,0)');
+   x.fillStyle=g;x.beginPath();x.arc(0,0,rx,0,Math.PI*2);x.fill();x.restore();
+ }
+
+ // one characteristic long worn crease near the middle-right, plus a few secondary scratches
+ const scratch=(sx,sy,ey,width,alpha,drift)=>{
+   x.strokeStyle=`rgba(245,226,193,${alpha})`;x.lineWidth=width;x.lineCap='round';
+   let y=sy,xx=sx;
+   while(y<ey){
+     const len=18+rnd()*48;
+     if(rnd()>.18){
+       x.beginPath();x.moveTo(xx,y);
+       const ny=Math.min(ey,y+len);
+       x.bezierCurveTo(xx+(rnd()-.5)*drift,y+len*.3,xx+(rnd()-.5)*drift,y+len*.72,xx+(rnd()-.5)*drift,ny);
+       x.stroke();
+     }
+     y+=len+4+rnd()*14;xx+=(rnd()-.5)*1.8;
+   }
+ };
+ scratch(PX+PW*.575,PY+5,PY+PH-8,1.15,.27,5);
+ scratch(PX+PW*.18,PY+40,PY+PH*.72,.55,.16,4);
+ scratch(PX+PW*.79,PY+18,PY+PH*.84,.7,.18,5);
+ scratch(PX+PW*.91,PY+95,PY+PH-25,.45,.13,4);
+
+ // scattered short abrasions, no horizontal/vertical grid
+ for(let k=0;k<24;k++){
+   const sx=PX+10+rnd()*(PW-20),sy=PY+10+rnd()*(PH-20);
+   const ang=(rnd()-.5)*1.2 + (rnd()>.75?Math.PI/2:0);
+   const len=7+rnd()*34;
+   x.strokeStyle=`rgba(244,224,190,${.07+rnd()*.12})`;
+   x.lineWidth=.35+rnd()*.7;x.lineCap='round';
+   x.beginPath();x.moveTo(sx,sy);
+   x.quadraticCurveTo(sx+Math.cos(ang)*len*.45+(rnd()-.5)*3,sy+Math.sin(ang)*len*.45+(rnd()-.5)*3,
+                      sx+Math.cos(ang)*len,sy+Math.sin(ang)*len);x.stroke();
+ }
+ x.restore();
+
+ // 4) Oxidation spots are few, soft and mostly on paper/stub.
+ for(let k=0;k<34;k++){
+   let px=TX+8+rnd()*(TW-16),py=TY+8+rnd()*(TH-16);
+   if(px>PX && px<PX+PW && py>PY && py<PY+PH && rnd()<.82){k--;continue}
+   const rr=1.4+rnd()*5.5,a=.035+rnd()*.075;
+   const g=x.createRadialGradient(px,py,0,px,py,rr);
+   g.addColorStop(0,`rgba(78,43,20,${a})`);g.addColorStop(1,'rgba(78,43,20,0)');
+   x.fillStyle=g;x.beginPath();x.arc(px,py,rr,0,Math.PI*2);x.fill();
+ }
+
+ x.restore();
+}
+
+function draw(){
+ const p=P[color];x.clearRect(0,0,c.width,c.height);
+ x.fillStyle=p.paper;basePath();x.fill();perforate();
+
+ // subtle paper speckle only inside ticket
+ x.save();basePath();x.clip();for(let i=0;i<600;i++){let a=TX+((Math.sin(i*87.1)*.5+.5)*TW),b=TY+((Math.sin(i*41.7+1)*.5+.5)*TH);x.fillStyle=i%2?'rgba(70,50,30,.018)':'rgba(255,255,255,.08)';x.fillRect(a,b,1,1)}x.restore();perforate();
+
+ // exact 16:9 photo
+ contain16();
+ agedPrintEffect();
+
+
+ x.strokeStyle=p.frame;x.lineWidth=7;x.strokeRect(PX-3.5,PY-3.5,PW+7,PH+7);
+ x.strokeStyle=p.ink;x.globalAlpha=.28;x.lineWidth=1;x.strokeRect(PX,PY,PW,PH);x.globalAlpha=1;
+
+ // small archival markings on the photograph
+ x.fillStyle='rgba(255,249,239,.92)';x.textAlign='left';x.font='700 9px Arial';
+ if(showArchive.checked)x.fillText('PICTURE ARCHIVE  /  SERIES 26',PX+27,PY+28);
+ x.textAlign='right';if(showArchive.checked)x.fillText('FRAME 0017',PX+PW-27,PY+28);
+ x.strokeStyle='rgba(255,249,239,.55)';x.lineWidth=1;
+ if(showArchive.checked){x.beginPath();x.moveTo(PX+27,PY+38);x.lineTo(PX+170,PY+38);x.stroke();}
+
+ // readable gradient + editable text
+ let g=x.createLinearGradient(0,PY+PH*.48,0,PY+PH);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.64)');x.fillStyle=g;x.fillRect(PX,PY+PH*.42,PW,PH*.58);
+ x.fillStyle='#fff9ef';x.textAlign='left';let fs=fit(title.value||'Memory Lane',620,46);x.font=`italic 800 ${fs}px Georgia`;x.shadowColor='#0008';x.shadowBlur=4;if(showTitle.checked)x.fillText(title.value||'Memory Lane',PX+27,PY+PH-62);
+ x.font='700 12px Arial';if(showSubtitle.checked)x.fillText((subtitle.value||'A MOMENT WORTH KEEPING').toUpperCase(),PX+29,PY+PH-34);x.shadowBlur=0;
+
+ // perforated stub divider + vertical archival label
+ x.strokeStyle=p.ink;x.globalAlpha=.24;x.setLineDash([5,8]);
+ x.beginPath();x.moveTo(CUT,TY+24);x.lineTo(CUT,TY+TH-24);x.stroke();
+ x.setLineDash([]);x.globalAlpha=1;
+ for(let yy=TY+34;yy<TY+TH-25;yy+=25){
+   x.fillStyle=p.frame;x.beginPath();x.arc(CUT,yy,3.2,0,Math.PI*2);x.fill();
+ }
+ x.save();x.translate(CUT+12,TY+TH-27);x.rotate(-Math.PI/2);
+ x.fillStyle=p.ink;x.globalAlpha=.42;x.font='700 7px Arial';x.textAlign='left';
+ x.fillText('DETACH HERE  •  MEMORY TICKET',0,0);x.restore();
+
+ // RIGHT STUB — all content is constrained to this box.
+ const RX=845, RW=270, RR=RX+RW;
+
+ // Vintage ticket header — no UI-like box.
+ x.fillStyle=p.ink;x.textAlign='center';x.font='700 12px Georgia';
+ x.fillText((topEl.value||'ADMIT ONE').toUpperCase(),RX+RW/2,103);
+ x.strokeStyle=p.accent;x.globalAlpha=.55;x.lineWidth=1;
+ x.beginPath();x.moveTo(RX,99);x.lineTo(RX+82,99);x.stroke();
+ x.beginPath();x.moveTo(RR-82,99);x.lineTo(RR,99);x.stroke();
+ x.textAlign='right';x.globalAlpha=.45;x.font='7px monospace';
+ x.fillText('SERIES 26',RR,119);x.globalAlpha=1;
+ x.strokeStyle=p.accent;x.globalAlpha=.28;x.beginPath();x.moveTo(RX,127);x.lineTo(RR,127);x.stroke();x.globalAlpha=1;
+
+ // Name
+ x.textAlign='left';x.fillStyle=p.ink;x.globalAlpha=.52;x.font='8px Arial';x.fillText('NAME',RX,148);x.globalAlpha=1;
+ let nm=(nameEl.value||'YOUR NAME').toUpperCase(),nfs=fit(nm,RW,24);
+ x.font=`700 ${nfs}px "RIENTicketFont",serif`;x.fillText(nm,RX,174);
+
+ // Date / Place — fixed two-column grid
+ const COL2=980;
+ x.strokeStyle=p.accent;x.globalAlpha=.22;x.beginPath();x.moveTo(RX,188);x.lineTo(RR,188);x.stroke();x.globalAlpha=1;
+ x.fillStyle=p.ink;x.globalAlpha=.52;x.font='8px Arial';x.fillText('DATE',RX,208);x.fillText('PLACE',COL2,208);x.globalAlpha=1;
+ x.font='700 14px "RIENTicketFont",serif';x.fillText((date.value||'0000-00-00').replaceAll('-','.'),RX,229);
+ let plc=(place.value||'SEOUL').toUpperCase();
+ let pfs=fit(plc,RR-COL2,12,'Arial');x.font=`700 ${pfs}px "RIENTicketFont",serif`;x.fillText(plc,COL2,229);
+
+ // Seat
+ x.strokeStyle=p.accent;x.globalAlpha=.22;x.beginPath();x.moveTo(RX,244);x.lineTo(RR,244);x.stroke();x.globalAlpha=1;
+ x.fillStyle=p.ink;x.globalAlpha=.52;x.font='8px Arial';x.fillText('SEAT / NO.',RX,264);x.globalAlpha=1;
+ let st=(seat.value||'A / 17').toUpperCase(),sfs=fit(st,RW,23,'monospace');
+ x.font=`700 ${sfs}px "RIENTicketFont",serif`;x.fillText(st,RX,291);
+
+ // Barcode area
+ x.strokeStyle=p.accent;x.globalAlpha=.22;x.beginPath();x.moveTo(RX,307);x.lineTo(RR,307);x.stroke();x.globalAlpha=1;
+ x.fillStyle=p.ink;let bx=RX;
+ for(let i=0;i<39 && bx<RR-5;i++){let w=i%7===0?4:i%3===0?2:1;x.fillRect(bx,326,w,38);bx+=w+3}
+ x.globalAlpha=.48;x.font='7px monospace';x.fillText('0017  •  SERIES 26  •  ARCHIVE',RX,378);x.globalAlpha=1;
+
+ // Footer
+ x.strokeStyle=p.accent;x.globalAlpha=.22;x.beginPath();x.moveTo(RX,392);x.lineTo(RR,392);x.stroke();x.globalAlpha=1;
+ x.fillStyle=p.ink;x.font='7px Arial';
+ let ft=(footer.value||'MEMORY ARCHIVE · 0017').toUpperCase();
+ let ffs=fit(ft,RW,8,'Arial');x.font=`700 ${ffs}px "RIENTicketFont",serif`;x.fillText(ft,RX,412);
+ x.globalAlpha=.5;x.font='7px monospace';x.fillText('KEEP THIS MOMENT / NO.0017',RX,430);x.globalAlpha=1;
+
+ // Small cancellation seal, confined to the unused header corner.
+ x.save();x.globalAlpha=.11;x.strokeStyle=p.accent;x.fillStyle=p.accent;x.lineWidth=1.4;
+ const CX=1088,CY=102;
+ x.beginPath();x.arc(CX,CY,20,0,Math.PI*2);x.stroke();
+ x.beginPath();x.arc(CX,CY,14,0,Math.PI*2);x.stroke();
+ x.textAlign='center';x.font='700 5px Arial';x.fillText('MEMORY',CX,CY-1);x.fillText('26',CX,CY+6);
+ for(let j=0;j<3;j++){x.beginPath();x.moveTo(1058,120+j*5);x.bezierCurveTo(1070,116+j*5,1085,124+j*5,1110,119+j*5);x.stroke()}
+ x.restore();
+}
+const defaults={title:'Memory Lane',subtitle:'A MOMENT WORTH KEEPING',top:'ADMIT ONE',name:'YOUR NAME',place:'SEOUL',seat:'A / 17',footer:'MEMORY ARCHIVE · 0017'};
+const vis=[showTitle,showSubtitle,showArchive];
+function saveState(){
+ if(!rememberSettings.checked)return;
+ localStorage.setItem('ticketMakerV25',JSON.stringify({title:title.value,subtitle:subtitle.value,top:topEl.value,name:nameEl.value,date:date.value,place:place.value,seat:seat.value,footer:footer.value,vintage:vintage.checked,zoom:zoom.value,panX:panX.value,panY:panY.value,color,custom:customColor.value,scale:exportScale.value,vis:vis.map(v=>v.checked)}));
+}
+function restoreState(){
+ try{
+  const s=JSON.parse(localStorage.getItem('ticketMakerV25')||'null');
+  if(!s)return false;
+  rememberSettings.checked=true;
+  title.value=s.title??defaults.title;subtitle.value=s.subtitle??defaults.subtitle;topEl.value=s.top??defaults.top;
+  nameEl.value=s.name??defaults.name;date.value=s.date||new Date().toISOString().slice(0,10);
+  place.value=s.place??defaults.place;seat.value=s.seat??defaults.seat;footer.value=s.footer??defaults.footer;
+  vintage.checked=!!s.vintage;zoom.value=s.zoom??100;panX.value=s.panX??0;panY.value=s.panY??0;
+  customColor.value=s.custom||'#f3e7cf';exportScale.value=s.scale||'1';
+  if(Array.isArray(s.vis))vis.forEach((v,i)=>v.checked=s.vis[i]!==false);
+  color=s.color||'white'; if(color==='custom')setCustom(customColor.value);
+  document.querySelectorAll('[data-color]').forEach(v=>v.classList.toggle('on',v.dataset.color===color));
+  return true;
+ }catch(e){return false}
+}
+let ticketFontReady=false;
+let ticketFontLoading=null;
+
+async function ensureTicketFont(){
+  if(ticketFontReady) return true;
+  if(ticketFontLoading) return ticketFontLoading;
+
+  ticketFontLoading=(async()=>{
+    if(!document.fonts) return false;
+    try{
+      await document.fonts.load('400 18px "RIENTicketFont"');
+      await document.fonts.load('700 18px "RIENTicketFont"');
+      await document.fonts.ready;
+
+      const ok400=document.fonts.check('400 18px "RIENTicketFont"');
+      const ok700=document.fonts.check('700 18px "RIENTicketFont"');
+      ticketFontReady=ok400 && ok700;
+      return ticketFontReady;
+    }catch(e){
+      return false;
+    }finally{
+      ticketFontLoading=null;
+    }
+  })();
+
+  return ticketFontLoading;
+}
+
+function redraw(){
+  zoomVal.textContent=zoom.value+'%';
+
+  // 사진/프레임은 즉시 갱신하고, 웹폰트가 도착하면 반드시 같은 화면을 다시 그림.
+  draw();
+  if(!ticketFontReady){
+    ensureTicketFont().then(ok=>{
+      if(ok) draw();
+    });
+  }
+  saveState();
+}
+[file,vintage,title,subtitle,topEl,nameEl,date,place,seat,footer,zoom,panX,panY,...vis,exportScale].forEach(e=>e.addEventListener('input',redraw));
+rememberSettings.onchange=()=>{
+ if(rememberSettings.checked){saveState();}
+ else{localStorage.removeItem('ticketMakerV25');localStorage.removeItem('ticketMakerV24');}
+};
+file.onchange=()=>{if(!file.files[0])return;let u=URL.createObjectURL(file.files[0]),z=new Image();z.onload=()=>{img=z;zoom.value=100;panX.value=0;panY.value=0;redraw();URL.revokeObjectURL(u)};z.src=u};
+document.querySelectorAll('[data-color]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-color]').forEach(v=>v.classList.remove('on'));b.classList.add('on');color=b.dataset.color;redraw()});
+customColor.oninput=()=>{setCustom(customColor.value);color='custom';document.querySelectorAll('[data-color]').forEach(v=>v.classList.remove('on'));redraw()};
+document.querySelector('#customBtn').onclick=()=>{setCustom(customColor.value);color='custom';document.querySelectorAll('[data-color]').forEach(v=>v.classList.remove('on'));redraw()};
+document.querySelector('#randomNo').onclick=()=>{let n=String(Math.floor(Math.random()*10000)).padStart(4,'0');seat.value='A / '+n;footer.value='MEMORY ARCHIVE · '+n;redraw()};
+document.querySelector('#resetText').onclick=()=>{title.value=defaults.title;subtitle.value=defaults.subtitle;topEl.value=defaults.top;nameEl.value=defaults.name;date.value=new Date().toISOString().slice(0,10);place.value=defaults.place;seat.value=defaults.seat;footer.value=defaults.footer;redraw()};
+document.querySelector('#resetAll').onclick=()=>{localStorage.removeItem('ticketMakerV24');localStorage.removeItem('ticketMakerV25');rememberSettings.checked=false;img=null;file.value='';vintage.checked=false;zoom.value=100;panX.value=0;panY.value=0;color='white';customColor.value='#f3e7cf';exportScale.value='1';vis.forEach(v=>v.checked=true);title.value=defaults.title;subtitle.value=defaults.subtitle;topEl.value=defaults.top;nameEl.value=defaults.name;date.value=new Date().toISOString().slice(0,10);place.value=defaults.place;seat.value=defaults.seat;footer.value=defaults.footer;document.querySelectorAll('[data-color]').forEach(v=>v.classList.toggle('on',v.dataset.color==='white'));zoomVal.textContent='100%';draw()};
+document.querySelector('#save').onclick=()=>{
+ draw();
+ const s=Number(exportScale.value);
+ const cropX=TX,cropY=TY,cropW=TW,cropH=TH;
+ const o=document.createElement('canvas');
+ o.width=cropW*s;o.height=cropH*s;
+ const q=o.getContext('2d',{alpha:true});
+ q.clearRect(0,0,o.width,o.height);
+ q.imageSmoothingEnabled=true;q.imageSmoothingQuality='high';
+
+ /* 티켓 사각 영역만 투명 캔버스 위에 복사 */
+ q.drawImage(c,cropX,cropY,cropW,cropH,0,0,o.width,o.height);
+
+ /* preview의 perforate()와 정확히 같은 위치로 알파를 다시 뚫는다 */
+ q.save();
+ q.globalCompositeOperation='destination-out';
+ q.fillStyle='rgba(0,0,0,1)';
+ const r=9*s,nx=40,ny=16,sx=o.width/nx,sy=o.height/ny;
+ for(let i=0;i<nx;i++){
+   const xx=sx*(i+.5);
+   q.beginPath();q.arc(xx,0,r,0,Math.PI*2);q.fill();
+   q.beginPath();q.arc(xx,o.height,r,0,Math.PI*2);q.fill();
+ }
+ for(let i=0;i<ny;i++){
+   const yy=sy*(i+.5);
+   q.beginPath();q.arc(0,yy,r,0,Math.PI*2);q.fill();
+   q.beginPath();q.arc(o.width,yy,r,0,Math.PI*2);q.fill();
+ }
+ const corner=4.5*s;
+ [[0,0],[o.width,0],[0,o.height],[o.width,o.height]].forEach(([a,b])=>{
+   q.beginPath();q.arc(a,b,corner,0,Math.PI*2);q.fill();
+ });
+ q.restore();
+
+ /* PNG alpha 보존 */
+ o.toBlob(blob=>{
+   if(!blob)return;
+   const url=URL.createObjectURL(blob),a=document.createElement('a');
+   a.download='ticket-maker.png';a.href=url;a.click();
+   setTimeout(()=>URL.revokeObjectURL(url),1000);
+ },'image/png');
+};
+zoomVal.textContent=zoom.value+'%';
+
+restoreState();
+zoomVal.textContent=zoom.value+'%';
+async function firstDraw(){
+  if(document.fonts){
+    try{
+      await document.fonts.load('400 18px "RIENTicketFont"', 'YOUR NAME 서울 SEOUL A 17 2026.09.15');
+      await document.fonts.load('700 18px "RIENTicketFont"', 'YOUR NAME 서울 SEOUL A 17 2026.09.15');
+      await document.fonts.ready;
+    }catch(e){}
+  }
+  draw();
+}
+firstDraw();
+</script></body></html>

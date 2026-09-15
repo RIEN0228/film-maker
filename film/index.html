@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FILM MAKER</title>
+<style>
+*{box-sizing:border-box}:root{--bg:#1b1815;--panel:#25211c;--line:#4a4238}
+body{margin:0;background:var(--bg);color:#f2ece3;font-family:Arial,"Noto Sans KR",sans-serif}
+.wrap{max-width:1260px;margin:auto;padding:34px 24px 60px}
+h1{margin:0;font:800 27px Georgia,"Times New Roman",serif;letter-spacing:5px}
+.sub{margin:7px 0 25px;color:#aaa197;font-size:11px;letter-spacing:2px}
+.layout{display:grid;grid-template-columns:minmax(0,850px) 340px;gap:28px}
+.preview{background:#302c28;border:1px solid #49423a;padding:24px;min-height:520px;display:flex;align-items:center;position:sticky;top:24px;align-self:start}
+.stage{width:100%;padding:30px 16px;background:repeating-conic-gradient(#4a4742 0 25%,#615d57 0 50%) 50%/20px 20px}
+canvas{display:block;width:100%;height:auto;box-shadow:none}
+.panel{background:var(--panel);border:1px solid var(--line);padding:19px;max-height:calc(100vh - 120px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.g{padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid #463e35}.g:last-of-type{border:0}
+.t{font-size:12px;font-weight:900;letter-spacing:1.3px;margin-bottom:10px}
+.s,label{display:block;font-size:11px;color:#bdb4a8;margin:7px 0}
+.drop{height:110px;border:1px dashed #554b40;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;color:#bdb4a8;overflow:hidden;background:#181511}
+.drop:hover{border-color:#8a7c6d;color:#eee8df}.drop img{width:100%;height:100%;object-fit:contain;display:none}
+input[type=range]{width:100%;accent-color:#b79b7b}
+input[type=checkbox],input[type=radio]{accent-color:#b79b7b}
+input[type=date],textarea{width:100%;padding:9px;background:#181511;color:#eee8df;border:1px solid #51483e;font:inherit}
+textarea{height:70px;resize:vertical;line-height:1.45}
+button{width:100%;padding:13px;border:0;background:#ebe3d5;color:#211d18;font-weight:900;letter-spacing:1px;cursor:pointer}
+button:disabled{opacity:.35}.status{font-size:11px;color:#bdb4a8;text-align:center;margin-top:9px}
+@media(max-width:920px){.layout{grid-template-columns:1fr}.preview{min-height:auto;position:static}.panel{max-height:none;overflow:visible}}
+</style>
+</head><body>
+<div class="wrap">
+<h1>FILM MAKER</h1><div class="sub">ANIMATED FILM PHOTO · GIF MAKER</div>
+<div class="layout">
+<section class="preview"><div class="stage"><canvas id="c" width="720" height="500"></canvas></div></section>
+<section class="panel">
+<div class="g"><div class="t">사진</div><div class="drop" id="drop"><div id="dt"><b>사진 한 장 넣기</b><br><span class="s">클릭 또는 드래그</span></div><img id="thumb"></div><input id="file" type="file" accept="image/*" hidden></div>
+<div class="g"><div class="t">필름 움직임</div><span class="s">속도</span><input id="speed" type="range" min=".75" max="1.35" step=".05" value="1"><span class="s">지지직 강도</span><input id="jit" type="range" min=".5" max="1.5" step=".05" value="1"><span class="s">필름 그레인</span><input id="grain" type="range" min="0" max=".6" step=".05" value=".10"><span class="s">비네트</span><input id="vignette" type="range" min="0" max="1" step=".05" value=".45"></div>
+<div class="g"><div class="t">날짜</div><input id="date" type="date"><label><input id="showDate" type="checkbox" checked> 날짜 표시</label></div>
+<div class="g"><div class="t">영화 대사</div><textarea id="quote" maxlength="80" placeholder="사진에 넣을 문구를 작성해 주세요."></textarea><span class="s">최대 두 줄로 표시됩니다.</span><label><input id="showQuote" type="checkbox" checked> 문구 표시</label></div>
+<div class="g"><label><input id="flash" type="checkbox" checked> 중앙에 멈출 때 짧은 플래시</label><label><input id="scan" type="checkbox" checked> 스캔라인</label></div>
+<div class="g"><div class="t">GIF 저장 설정</div>
+<label><input type="radio" name="fps" value="24" checked> 고화질 · 24fps</label>
+<label><input type="radio" name="fps" value="20"> 용량 절약 · 20fps</label>
+<div class="s" style="margin-top:10px">저장 크기</div>
+<label><input type="radio" name="outsize" value="720" checked> 기본 · 720 × 500</label>
+<label><input type="radio" name="outsize" value="504"> 작은 사이즈 · 504 × 350</label>
+</div>
+<button id="save" disabled>GIF 만들기</button><div class="status" id="status"></div>
+</section>
+</div></div>
+<script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+<script>
+const $=s=>document.querySelector(s),c=$('#c'),x=c.getContext('2d'),file=$('#file'),drop=$('#drop'),thumb=$('#thumb'),dt=$('#dt'),speed=$('#speed'),jit=$('#jit'),grain=$('#grain'),vignette=$('#vignette'),date=$('#date'),showDate=$('#showDate'),quote=$('#quote'),showQuote=$('#showQuote'),flash=$('#flash'),scan=$('#scan'),save=$('#save'),status=$('#status');
+let img=null,start=performance.now(); date.value=new Date().toISOString().slice(0,10);
+drop.onclick=()=>file.click();drop.ondragover=e=>e.preventDefault();drop.ondrop=e=>{e.preventDefault();if(e.dataTransfer.files[0])load(e.dataTransfer.files[0])};file.onchange=()=>file.files[0]&&load(file.files[0]);
+function load(f){let u=URL.createObjectURL(f),z=new Image();z.onload=()=>{img=z;thumb.src=u;thumb.style.display='block';dt.style.display='none';save.disabled=false};z.src=u}
+function rr(cx,cy,w,h,r){x.beginPath();x.roundRect(cx,cy,w,h,r);x.fill()}
+function rnd(n){return ((Math.sin(n*12.9898)*43758.5453)%1+1)%1}
+function cover(px,py,w,h){let s=Math.max(w/img.width,h/img.height),sw=w/s,sh=h/s;x.drawImage(img,(img.width-sw)/2,(img.height-sh)/2,sw,sh,px,py,w,h)}
+function wrap(text,max){let a=[''];for(let ch of [...text]){let i=a.length-1,t=a[i]+ch;if(x.measureText(t).width>max&&a[i]){if(a.length===2)break;a.push(ch)}else a[i]=t}return a}
+function oneFilm(y,ms,active){
+  // entire film cell moves as one object
+  x.save();x.translate(0,y);
+  x.fillStyle='#0b0b0b';x.fillRect(0,0,720,500);
+
+  // real transparent sprocket holes: punch alpha out
+  x.save();x.globalCompositeOperation='destination-out';x.fillStyle='#000';
+  for(let yy=18;yy<490;yy+=58){rr(19,yy,30,34,5);rr(671,yy,30,34,5)}
+  x.restore();
+
+  // photo gate
+  if(img){x.save();x.beginPath();x.rect(68,48,584,404);x.clip();cover(68,48,584,404);x.restore()}
+  else{x.fillStyle='#202020';x.fillRect(68,48,584,404)}
+
+  // subtle photo vignette
+  let va=+vignette.value;
+  if(va>0){
+    let g=x.createRadialGradient(360,245,120,360,245,355);
+    g.addColorStop(0,'rgba(0,0,0,0)');
+    g.addColorStop(.55,'rgba(0,0,0,'+(va*.08)+')');
+    g.addColorStop(1,'rgba(0,0,0,'+(va*.72)+')');
+    x.fillStyle=g;x.fillRect(68,48,584,404);
+  }
+
+  // film markings, no brand name
+  x.fillStyle='#caa064';x.font='12px monospace';x.textAlign='left';x.fillText('FILM 400',70,26);x.fillText('36',620,26);x.fillText('◀ 08',70,484);
+
+  if(active){
+    // grain and scan line travel with the film/photo
+    let a=+grain.value;x.save();
+    for(let i=0;i<Math.floor(360*a);i++){x.globalAlpha=.05+a*.08;x.fillStyle=i%2?'#fff':'#000';x.fillRect(68+rnd(i+ms*.01)*584,48+rnd(i*3+ms*.02)*404,1+(i%2),1+(i%2))}
+    if(scan.checked){x.globalAlpha=.10;x.fillStyle='#fff';let sy=48+(ms*.2)%404;x.fillRect(68,sy,584,1)}
+    x.restore();
+
+    if(showQuote.checked&&quote.value.trim()){
+      x.save();x.font='italic 19px "Gulim","굴림","Arial Rounded MT Bold","Noto Sans KR",sans-serif';x.textAlign='center';let lines=wrap(quote.value.trim(),500),base=423-(lines.length-1)*12;x.lineWidth=3;x.strokeStyle='rgba(0,0,0,.72)';x.fillStyle='#fff';
+      lines.forEach((t,i)=>{let yy=base+i*25;x.strokeText(t,360,yy);x.fillText(t,360,yy)});x.restore()
+    }
+    if(showDate.checked&&date.value){x.fillStyle='#f0a05c';x.font='15px monospace';x.textAlign='right';x.fillText(date.value.replaceAll('-','.'),635,438);x.textAlign='left'}
+  }
+  x.restore();
+}
+function draw(ms){
+  x.clearRect(0,0,720,500); // transparent canvas outside actual film
+  if(!img){oneFilm(0,ms,true);x.fillStyle='#ddd';x.textAlign='center';x.font='bold 22px Arial';x.fillText('사진 한 장을 넣어주세요',360,250);x.textAlign='left';return}
+  let moveD=1225/+speed.value,holdD=1500,d=moveD+holdD,t=ms%d,p=Math.min(1,t/moveD),J=+jit.value,off=0;
+  if(t<moveD){
+    let base;
+    if(p<.72){const u=p/.72;base=500*(1-u);base+=Math.exp(-Math.pow((p-.25)/.035,2))*18+Math.exp(-Math.pow((p-.50)/.030,2))*12}
+    else if(p<.88){const u=(p-.72)/.16,e=(1-Math.cos(Math.PI*u))/2;base=-24*e}
+    else{const u=(p-.88)/.12,e=1-Math.pow(1-u,3);base=-24*(1-e)}
+    const fade=Math.max(0,1-p),micro=(Math.sin(ms*.050)*1.25+Math.sin(ms*.083+1.4)*.65)*J*fade;off=base+micro
+  } else off=(Math.sin(ms*.021)*.42+Math.sin(ms*.037+1.1)*.22)*J;
+
+  // consecutive physical film frames so holes/frame/photo all travel together
+  oneFilm(off-500,ms,false); oneFilm(off,ms,true); oneFilm(off+500,ms,false);
+
+  if(flash.checked&&t>=moveD&&t<moveD+135){let fp=(t-moveD)/135,z=1-Math.abs(fp-.5)/.5;x.fillStyle='rgba(255,250,235,'+(Math.max(0,z)*.22)+')';x.fillRect(68,48,584,404)}
+}
+function loop(t){draw(t-start);requestAnimationFrame(loop)}requestAnimationFrame(loop);
+
+
+function ditherOpaque(im,w,h){
+  const p=im.data, er=new Float32Array(w*h), eg=new Float32Array(w*h), eb=new Float32Array(w*h);
+  const add=(xx,yy,dr,dg,db,k)=>{
+    if(xx<0||xx>=w||yy<0||yy>=h)return;
+    const j=yy*w+xx,q=j*4;
+    if(p[q+3]<245)return;
+    er[j]+=dr*k;eg[j]+=dg*k;eb[j]+=db*k;
+  };
+  for(let y=0;y<h;y++){
+    const rev=y&1;
+    for(let s=0;s<w;s++){
+      const xx=rev?w-1-s:s, j=y*w+xx, q=j*4;
+      if(p[q+3]<245)continue;
+      let r=Math.max(0,Math.min(255,p[q]+er[j]));
+      let g=Math.max(0,Math.min(255,p[q+1]+eg[j]));
+      let b=Math.max(0,Math.min(255,p[q+2]+eb[j]));
+      // gentle 6-bit/channel pre-quantization: enough texture for GIF without harsh speckles
+      let nr=Math.round(r/4)*4, ng=Math.round(g/4)*4, nb=Math.round(b/4)*4;
+      p[q]=nr;p[q+1]=ng;p[q+2]=nb;
+      let dr=r-nr,dg=g-ng,db=b-nb,dir=rev?-1:1;
+      add(xx+dir,y,dr,dg,db,7/16);
+      add(xx-dir,y+1,dr,dg,db,3/16);
+      add(xx,y+1,dr,dg,db,5/16);
+      add(xx+dir,y+1,dr,dg,db,1/16);
+    }
+  }
+  return im;
+}
+let gifWorkerURL=null;
+async function getGifWorker(){
+  if(gifWorkerURL)return gifWorkerURL;
+  const r=await fetch('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js');
+  if(!r.ok)throw new Error('GIF worker를 불러오지 못했어요.');
+  gifWorkerURL=URL.createObjectURL(new Blob([await r.text()],{type:'application/javascript'}));
+  return gifWorkerURL;
+}
+async function encodeGif(targetFps,outW){
+  const outH=Math.round(outW*500/720),workerScript=await getGifWorker();
+  return await new Promise((resolve,reject)=>{
+    const gif=new GIF({workers:2,quality:1,width:outW,height:outH,transparent:0xFF00FF,dither:false,workerScript});
+    const dur=1225/+speed.value+1500,N=Math.max(1,Math.round(dur/1000*targetFps));
+    for(let i=0;i<N;i++){
+      draw(i/N*dur);
+      const temp=document.createElement('canvas');temp.width=outW;temp.height=outH;
+      const tx=temp.getContext('2d',{alpha:true});
+      tx.imageSmoothingEnabled=true;tx.imageSmoothingQuality='high';
+      tx.clearRect(0,0,outW,outH);tx.drawImage(c,0,0,outW,outH);
+      let im=tx.getImageData(0,0,outW,outH);
+      im=ditherOpaque(im,outW,outH);
+      const px=im.data;
+      // Transparency key is written AFTER dithering, so purple cannot bleed into visible pixels.
+      for(let q=0;q<px.length;q+=4){
+        if(px[q+3]<245){px[q]=255;px[q+1]=0;px[q+2]=255;px[q+3]=255}
+        else px[q+3]=255;
+      }
+      tx.putImageData(im,0,0);
+      gif.addFrame(tx,{copy:true,delay:Math.round(1000/targetFps)});
+    }
+    gif.on('progress',v=>status.textContent='GIF 만드는 중… '+Math.round(v*100)+'%');
+    gif.on('finished',resolve);
+    gif.on('abort',()=>reject(new Error('GIF 생성이 중단됐어요.')));
+    try{gif.render()}catch(e){reject(e)}
+  });
+}
+save.onclick=async()=>{
+  if(!img)return;
+  save.disabled=true;
+  const requested=Number(document.querySelector('input[name="fps"]:checked').value);
+  const outW=Number(document.querySelector('input[name="outsize"]:checked').value);
+  const limit=20*1024*1024;
+  const tries=requested>=24?[24,20]:[20];
+  try{
+    let blob=null,used=tries[0];
+    for(const f of tries){
+      status.textContent='고화질 GIF 만드는 중… '+f+'fps';
+      blob=await encodeGif(f,outW);used=f;
+      if(blob.size<limit)break;
+      if(f!==tries[tries.length-1])status.textContent='20MB에 맞추는 중…';
+    }
+    // 720px 20fps도 20MB를 넘는 드문 경우에는 504px로 마지막 안전 인코딩.
+    let finalW=outW;
+    if(blob.size>=limit && outW>504){
+      status.textContent='20MB에 맞추는 중…';
+      blob=await encodeGif(20,504);used=20;finalW=504;
+    }
+    if(blob.size>=limit)throw new Error('20MB 이하로 만들지 못했어요. 필름 그레인을 조금 낮춰주세요.');
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download='film-maker.gif';document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    status.textContent='완성! '+used+'fps · '+finalW+'px · '+(blob.size/1024/1024).toFixed(1)+'MB';
+  }catch(e){
+    console.error(e);status.textContent='GIF 생성 오류: '+e.message;
+  }finally{save.disabled=false}
+};
+</script></body></html>
