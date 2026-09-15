@@ -11,10 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download pinned gif.js 0.2.0 files
+      - name: Download gif.js 0.2.0 distribution files
         run: |
-          curl -fsSL https://raw.githubusercontent.com/jnordberg/gif.js/0.2.0/dist/gif.js -o gif.js
-          curl -fsSL https://raw.githubusercontent.com/jnordberg/gif.js/0.2.0/dist/gif.worker.js -o gif.worker.js
+          curl -fsSL https://raw.githubusercontent.com/jnordberg/gif.js/master/dist/gif.js -o gif.js
+          curl -fsSL https://raw.githubusercontent.com/jnordberg/gif.js/master/dist/gif.worker.js -o gif.worker.js
+          grep -q "gif.js 0.2.0" gif.js
+          grep -q "gif.worker.js 0.2.0" gif.worker.js
       - name: Commit vendored files
         run: |
           git config user.name "github-actions[bot]"
